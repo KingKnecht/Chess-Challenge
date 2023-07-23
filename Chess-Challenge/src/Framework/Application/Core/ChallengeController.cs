@@ -346,8 +346,18 @@ namespace ChessChallenge.Application
             }
         }
 
+        private int undoCount = 0;
         public void Update()
         {
+            if (Raylib.IsKeyPressed(KeyboardKey.KEY_A))
+            {
+                board.UndoMove(board.AllGameMoves[board.AllGameMoves.Count - ++undoCount]);
+                var fen = FenUtility.CurrentFen(board);
+                board.LoadPosition(fen);
+
+                Console.WriteLine("adsadsadasd");
+                
+            }
             if (isPlaying)
             {
                 PlayerWhite.Update();

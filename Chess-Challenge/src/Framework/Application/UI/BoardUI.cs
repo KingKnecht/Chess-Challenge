@@ -111,6 +111,8 @@ namespace ChessChallenge.Application
                     lastMove = moveMade;
                 }
             }
+
+            
         }
 
         void HighlightMove(Move move)
