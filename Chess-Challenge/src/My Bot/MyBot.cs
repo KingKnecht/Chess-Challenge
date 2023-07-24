@@ -8,38 +8,53 @@ using static MyBot;
 
 public class MyBot : IChessBot
 {
-
     public class Evaluation
     {
-        public Move BranchMove; public List<Evaluation> Children = new();
+        public int Depth { get; }
+        public Move BranchMove;
+        public List<Evaluation> Children = new();
         public bool IsRoot { get; }
 
-        public float Alpha { get; private set; }
-        public float Beta { get; private set; }
+        public float Alpha { get; private set; } = float.MinValue;
+        public float Beta { get; private set; } = float.MaxValue;
+
+        public float Value => IsMaximizerNode ? Alpha : Beta;
 
         public Evaluation Parent;
 
         public Evaluation(Move branchMove, Evaluation parent, int depth)
         {
+            Depth = depth;
             Parent = parent;
             BranchMove = branchMove;
             Alpha = float.MinValue;
             Beta = float.MaxValue;
+            IsMaximizerNode = depth % 2 == 0;
         }
+
+        public bool IsMaximizerNode { get; }
+
         public Evaluation()
         {
             IsRoot = true;
+            IsMaximizerNode = true;
         }
 
         public void SetValue(float value)
         {
-            Alpha = value;
+
+            if (IsMaximizerNode)
+            {
+                Alpha = Math.Max(Alpha, value);
+            }
+            else
+            {
+                Beta = Math.Min(Beta, value);
+            }
 
             if (IsRoot) return;
 
-            var alpha = Math.Max(value, Parent.Alpha);
-
-            Parent.SetValue(alpha);
+            Parent.SetValue(value);
         }
 
         public string ToBranchString()
@@ -50,7 +65,7 @@ public class MyBot : IChessBot
 
             if (!Children.Any()) return stringBuilder.ToString();
 
-            var minChild = Children.MinBy(p => p.Alpha);
+            var minChild = Children.MaxBy(p => p.Alpha);
             stringBuilder.AppendLine(minChild.ToString());
 
             ToBranchStringRec(stringBuilder, minChild);
@@ -72,45 +87,24 @@ public class MyBot : IChessBot
             return $"{BranchMove} ({Alpha})";
         }
 
+        private int _lastDepth = 0;
         public void GenerateTree(Board board, int depth, Evaluation parent, bool isWhite)
         {
+
             if (depth == 0) return;
 
             var moves = board.GetLegalMoves();
-            for (var i = 0; i < moves.Length; i++)
+            foreach (var newMove in moves)
             {
-                var newMove = moves[i];
                 board.MakeMove(newMove);
 
                 var value = GetMaterialDifference(board, isWhite);
-
-                if (!parent.IsRoot)
-                {
-                    var uncles = parent.Parent.Children;
-                    if (uncles.Any(n => n.Alpha > value))
-                    {
-                        board.UndoMove(newMove);
-                        return;
-                    }
-                    //else
-                    //{
-                    //    if (uncles.Any(n => n.Alpha < value))
-                    //    {
-                    //        board.UndoMove(new_move);
-                    //        return;
-                    //    }
-                    //}
-
-                }
-
                 var eval = new Evaluation(newMove, parent, depth);
                 Children.Add(eval);
                 eval.SetValue(value);
 
-
                 eval.GenerateTree(board, depth - 1, eval, isWhite);
                 board.UndoMove(newMove);
-
             }
         }
 
@@ -156,10 +150,10 @@ public class MyBot : IChessBot
         bool isWhite = board.PlyCount % 2 == 0;
 
         Evaluation node = new Evaluation();
-        node.GenerateTree(board, 4, node, isWhite);
+        node.GenerateTree(board, 2, node, isWhite);
 
 
-        var selectedMove = node.Children.MaxBy(n => n.Alpha);
+        var selectedMove = node.Children.MinBy(n => n.Alpha);
         Console.WriteLine(selectedMove.ToBranchString());
 
         return selectedMove.BranchMove;
