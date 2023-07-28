@@ -16,18 +16,17 @@ public class MyBot : IChessBot
 {
     public Move Think(Board board, Timer timer)
     {
-        var maxDepth = 5;
+        var maxDepth = 6;
         int depth = maxDepth - 1;
-        var isWhite = board.PlyCount % 2 == 0;
 
-        var result = AlphaBeta(board, depth, maxDepth, true, isWhite, float.MinValue, float.MaxValue);
+        var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue);
+        Console.WriteLine(result);
         return _bestMove;
     }
 
     private Move _bestMove = Move.NullMove;
 
-    private float AlphaBeta(Board board, int depth, int maxDepth, bool isMaximizer, bool isWhite, float alpha,
-        float beta)
+    private float AlphaBeta(Board board, int depth, int maxDepth, bool isMaximizer, bool isWhite, float alpha, float beta)
     {
   
         // If max depth is reached or Game is Over
@@ -45,7 +44,7 @@ public class MyBot : IChessBot
             {
                 board.MakeMove(move);
 
-                var value = AlphaBeta(board, depth - 1, maxDepth, isWhite, !isMaximizer, alpha, beta);
+                var value = AlphaBeta(board, depth - 1, maxDepth, !isMaximizer, isWhite, alpha, beta);
                 board.UndoMove(move);
 
                 if (hValue < value)
@@ -56,6 +55,7 @@ public class MyBot : IChessBot
                     if (depth == maxDepth - 1)
                     {
                         _bestMove = move;
+                        Console.WriteLine(_bestMove);
                     }
                 }
 
@@ -73,7 +73,6 @@ public class MyBot : IChessBot
             float hValue = float.MaxValue;
 
             foreach (var move in board.GetLegalMoves().OrderByDescending(m => m.IsCapture))
-
             {
                 board.MakeMove(move);
 
@@ -112,15 +111,7 @@ public class MyBot : IChessBot
         }
 
         var result = isWhite ? totals[0] - totals[1] : totals[1] - totals[0];
-        //var result = totals[0] - totals[1];
         return result;
-    }
-
-    static int index = 0;
-    public static float FakeGetMaterialDifference(Board board, bool is_white)
-    {
-        var arr = new[] { 3, 12, 8, 2, 4, 6, 14, 5, 2 };
-        return arr[index++];
     }
 
     public static float GetPieceValue(Piece piece)
