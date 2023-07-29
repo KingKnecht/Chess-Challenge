@@ -1,15 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Xml.Linq;
 using ChessChallenge.API;
-using ChessChallenge.Chess;
-using Raylib_cs;
-using static MyBot;
 using Board = ChessChallenge.API.Board;
 using Move = ChessChallenge.API.Move;
 
@@ -24,10 +15,10 @@ public class MyBot : IChessBot
     public Move Think(Board board, Timer timer)
     {
         _resultsCalculated = 0;
-        
+
         int maxDepth = 6;
-        if (board.PlyCount > 10)
-            maxDepth = 6;
+        if (board.PlyCount > 20)
+            maxDepth = 8;
 
         int depth = maxDepth - 1;
         PlayerIsWhite = board.IsWhiteToMove;
@@ -39,9 +30,9 @@ public class MyBot : IChessBot
         Console.WriteLine($"Value: {result}");
         Console.WriteLine($"Time per move: {timer.MillisecondsElapsedThisTurn / 1000f}s");
         Console.WriteLine($"# Calcs: {_resultsCalculated}");
-        Console.WriteLine($"# Calcs/s: {_resultsCalculated / (timer.MillisecondsElapsedThisTurn /1000f)}");
+        Console.WriteLine($"# Calcs/s: {_resultsCalculated / (timer.MillisecondsElapsedThisTurn / 1000f)}");
         Console.WriteLine();
-        
+
         return _bestMove;
     }
 
@@ -58,15 +49,15 @@ public class MyBot : IChessBot
         }
 
         var orderedMoves = board.GetLegalMoves()
-                //.OrderBy(m => GetPieceValue(m.MovePieceType))
-                .OrderBy(m => MoveValue(m.MovePieceType, m.CapturePieceType))
-            //.ThenByDescending(m => m.PromotionPieceType)
-            //.ThenByDescending(m =>
-            // //                         m.TargetSquare.Name == "c3" || m.TargetSquare.Name == "c4" || m.TargetSquare.Name == "c5" || m.TargetSquare.Name == "c6"
-            //                        m.TargetSquare.Name == "d3" || m.TargetSquare.Name == "d4" || m.TargetSquare.Name == "d5" || m.TargetSquare.Name == "d6"
-            //                       || m.TargetSquare.Name == "e3" || m.TargetSquare.Name == "e4" || m.TargetSquare.Name == "e5" || m.TargetSquare.Name == "e6"
-            //                       //|| m.TargetSquare.Name == "f3" || m.TargetSquare.Name == "f4" || m.TargetSquare.Name == "f5" || m.TargetSquare.Name == "f6"
-            //)
+                .OrderByDescending(m => MoveValue(m.MovePieceType, m.CapturePieceType))
+                .ThenByDescending(m => m.IsPromotion)
+                .ThenByDescending(m => m.IsCastles)
+                .ThenByDescending(m =>
+                       m.TargetSquare.Name == "e4" || m.TargetSquare.Name == "e5"
+                    || m.TargetSquare.Name == "d4" || m.TargetSquare.Name == "d5")
+                .ThenBy(m => DevelopPiece(m.MovePieceType, board.PlyCount))
+                .ThenByDescending(m => m.PromotionPieceType)
+
             ;
 
 
@@ -131,6 +122,30 @@ public class MyBot : IChessBot
         }
     }
 
+    private int DevelopPiece(PieceType movePieceType, int plyCount)
+    {
+
+        switch (movePieceType)
+        {
+            case PieceType.None:
+                return 0;
+            case PieceType.Pawn:
+                return plyCount < 8 ? 0 : 1000;
+            case PieceType.Knight:
+                return plyCount > 6 ? 0 : 90;
+            case PieceType.Bishop:
+                return plyCount > 6 ? 0 : 90;
+            case PieceType.Rook:
+                return plyCount > 40 ? 0 : 100;
+            case PieceType.Queen:
+                return plyCount > 30 ? 0 : 100;
+            case PieceType.King:
+                return plyCount > 60 ? 0 : 1000;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(movePieceType), movePieceType, null);
+        }
+    }
+
     private int MoveValue(PieceType movePieceType, PieceType capturePieceType)
     {
         return (int)((10000f / (float)movePieceType) * (float)capturePieceType);
@@ -144,33 +159,32 @@ public class MyBot : IChessBot
 
         if (board.IsDraw())
         {
-            //if (lastMoveWasWhiteMove && PlayerIsWhite)
-            //{
-            //    if (diff < 0) return 10000;
-            //    if (diff > 0) return -10000;
-            //}
-            //else if (!lastMoveWasWhiteMove && !PlayerIsWhite)
-            //{
-            //    if (diff < 0) return -10000;
-            //    if (diff > 0) return 10000;
-            //}
+            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            {
+                return diff < -6 ? 10000 : -10000;
+            }
 
-            //return  -1000;
+            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            {
+                return diff < -6 ? 10000 : -10000;
+            }
+
+            return -1000;
         }
 
         if (board.IsInCheckmate())
         {
             if (lastMoveWasWhiteMove && PlayerIsWhite)
             {
-                return 100000;
+                return 100000 + 1000 / board.PlyCount;
             }
 
             if (!lastMoveWasWhiteMove && !PlayerIsWhite)
             {
-                return 100000;
+                return 100000 + 1000 / board.PlyCount;
             }
 
-            return -100000;
+            return -100000 - (1000 / board.PlyCount);
         }
 
         return diff;
@@ -193,7 +207,7 @@ public class MyBot : IChessBot
 
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     static readonly int[] PieceValues = { 0, 1, 3, 3, 5, 9, 10 };
-    
+
     public static int GetPieceValue(PieceType pieceType)
     {
         return PieceValues[(int)pieceType];
