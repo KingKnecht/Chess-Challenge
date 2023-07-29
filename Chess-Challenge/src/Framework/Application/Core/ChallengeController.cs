@@ -92,7 +92,10 @@ namespace ChessChallenge.Application
             board = new Board();
             bool isGameWithHuman = whiteType is PlayerType.Human || blackType is PlayerType.Human;
             int fenIndex = isGameWithHuman ? 0 : botMatchGameIndex / 2;
+
+            //Todo: Reset to standard start board FEN
             board.LoadPosition(botMatchStartFens[fenIndex]);
+            //board.LoadPosition(botMatchStartFens[505]);
 
             // Player Setup
             PlayerWhite = CreatePlayer(whiteType);

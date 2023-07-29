@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml.Linq;
 using ChessChallenge.API;
@@ -12,39 +13,59 @@ using static MyBot;
 using Board = ChessChallenge.API.Board;
 using Move = ChessChallenge.API.Move;
 
+
 public class MyBot : IChessBot
 {
+    private Move _bestMove = Move.NullMove;
+    private bool PlayerIsWhite;
+    private int _moveCount = 0;
     public Move Think(Board board, Timer timer)
     {
-        var maxDepth = 6;
-        int depth = maxDepth - 1;
 
-        var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue);
-        Console.WriteLine(result);
+        Console.WriteLine("Moves: " + ++_moveCount);
+
+        var maxDepth = 8;
+        int depth = maxDepth - 1;
+        PlayerIsWhite = board.IsWhiteToMove;
+
+        var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue, Move.NullMove);
         return _bestMove;
     }
 
-    private Move _bestMove = Move.NullMove;
 
-    private float AlphaBeta(Board board, int depth, int maxDepth, bool isMaximizer, bool isWhite, float alpha, float beta)
+    private int AlphaBeta(Board board, int depth, int maxDepth, bool isMaximizer, bool isWhite, float alpha, float beta, Move lastMove)
     {
-  
+
         // If max depth is reached or Game is Over
-        if (depth == 0 || board.IsInCheckmate())
+        if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
         {
-            var value = GetMaterialDifference(board, isWhite);
+            var value = GetPositionValue(board, isWhite, isMaximizer);
+            //Console.WriteLine(value.ToString());
             return value;
         }
+        
+        var orderedMoves = board.GetLegalMoves()
+                .OrderByDescending(m => GetPieceValue(m.CapturePieceType))
+                .ThenByDescending(m => m.PromotionPieceType)
+                .ThenByDescending(m => m.TargetSquare.Name == "e4"
+                                       || m.TargetSquare.Name == "e5"
+                                       || m.TargetSquare.Name == "d4"
+                                       || m.TargetSquare.Name == "d5")
+            ;
+
 
         if (isMaximizer)
         {
-            float hValue = float.MinValue;
+            var hValue = int.MinValue;
 
-            foreach (var move in board.GetLegalMoves().OrderByDescending(m => m.IsCapture))
+            foreach (var move in orderedMoves)
             {
-                board.MakeMove(move);
 
-                var value = AlphaBeta(board, depth - 1, maxDepth, !isMaximizer, isWhite, alpha, beta);
+                board.MakeMove(move);
+                var value = AlphaBeta(board, depth - 1, maxDepth, !isMaximizer, !isWhite, alpha, beta, move);
+
+                //Console.WriteLine($"{move}: {value}");
+
                 board.UndoMove(move);
 
                 if (hValue < value)
@@ -55,7 +76,7 @@ public class MyBot : IChessBot
                     if (depth == maxDepth - 1)
                     {
                         _bestMove = move;
-                        Console.WriteLine(_bestMove);
+                        //Console.WriteLine(_bestMove);
                     }
                 }
 
@@ -70,17 +91,17 @@ public class MyBot : IChessBot
         }
         else
         {
-            float hValue = float.MaxValue;
+            int hValue = int.MaxValue;
 
-            foreach (var move in board.GetLegalMoves().OrderByDescending(m => m.IsCapture))
+            foreach (var move in orderedMoves)
             {
                 board.MakeMove(move);
 
-                var value = AlphaBeta(board, depth - 1, maxDepth, !isMaximizer, isWhite, alpha, beta);
+                var value = AlphaBeta(board, depth - 1, maxDepth, !isMaximizer, !isWhite, alpha, beta, move);
 
                 board.UndoMove(move);
 
-                if (hValue > value) 
+                if (hValue > value)
                     hValue = value;
 
                 if (hValue < beta)
@@ -94,19 +115,55 @@ public class MyBot : IChessBot
         }
     }
 
-    public static float GetMaterialDifference(Board board, bool isWhite)
+    public int GetPositionValue(Board board, bool isWhite, bool isMaximizer)
     {
-        if (board.IsInCheckmate())
+        var lastMoveWasWhiteMove = !board.IsWhiteToMove;
+
+
+        var diff = GetMaterialDifference(board, lastMoveWasWhiteMove);
+
+        if (board.IsDraw())
         {
-            return isWhite ? 100000 : -100000;
+            //if (lastMoveWasWhiteMove && PlayerIsWhite)
+            //{
+            //    if (diff < 0) return 10000;
+            //    if (diff > 0) return -10000;
+            //}
+            //else if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            //{
+            //    if (diff < 0) return -10000;
+            //    if (diff > 0) return 10000;
+            //}
+
+            //return  -1000;
         }
 
-        float[] totals = { 0, 0 };
+        if (board.IsInCheckmate())
+        {
+            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            {
+                return 100000;
+            }
+
+            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            {
+                return 100000;
+            }
+
+            return -100000;
+        }
+
+        return diff;
+    }
+
+    private int GetMaterialDifference(Board board, bool isWhite)
+    {
+        int[] totals = { 0, 0 };
         foreach (var list in board.GetAllPieceLists())
         {
             foreach (var piece in list)
             {
-                totals[(list.IsWhitePieceList) ? 0 : 1] += GetPieceValue(piece);
+                totals[(list.IsWhitePieceList) ? 0 : 1] += GetPieceValue(piece.PieceType);
             }
         }
 
@@ -114,9 +171,9 @@ public class MyBot : IChessBot
         return result;
     }
 
-    public static float GetPieceValue(Piece piece)
+    public int GetPieceValue(PieceType pieceType)
     {
-        switch (piece.PieceType)
+        switch (pieceType)
         {
             case PieceType.Pawn:
                 return 1;
@@ -128,7 +185,7 @@ public class MyBot : IChessBot
             case PieceType.Queen:
                 return 9;
             case PieceType.King:
-                return 1000;
+                return 100;
 
         }
         return 0;
