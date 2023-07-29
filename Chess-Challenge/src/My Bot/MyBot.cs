@@ -8,7 +8,7 @@ using Move = ChessChallenge.API.Move;
 public class MyBot : IChessBot
 {
     private Move _bestMove = Move.NullMove;
-    private bool PlayerIsWhite;
+    private bool _playerIsWhite;
     private int _moveCount = 0;
     private int _resultsCalculated;
 
@@ -21,7 +21,7 @@ public class MyBot : IChessBot
             maxDepth = 8;
 
         int depth = maxDepth - 1;
-        PlayerIsWhite = board.IsWhiteToMove;
+        _playerIsWhite = board.IsWhiteToMove;
 
         var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue, Move.NullMove);
 
@@ -53,11 +53,8 @@ public class MyBot : IChessBot
                 .ThenByDescending(m => m.IsPromotion)
                 .ThenByDescending(m => m.IsCastles)
                 .ThenByDescending(m =>
-                       m.TargetSquare.Name == "e4" || m.TargetSquare.Name == "e5"
-                    || m.TargetSquare.Name == "d4" || m.TargetSquare.Name == "d5")
+                       m.TargetSquare.Name == "e4" || m.TargetSquare.Name == "e5" || m.TargetSquare.Name == "d4" || m.TargetSquare.Name == "d5")
                 .ThenBy(m => DevelopPiece(m.MovePieceType, board.PlyCount))
-                .ThenByDescending(m => m.PromotionPieceType)
-
             ;
 
 
@@ -132,9 +129,9 @@ public class MyBot : IChessBot
             case PieceType.Pawn:
                 return plyCount < 8 ? 0 : 1000;
             case PieceType.Knight:
-                return plyCount > 6 ? 0 : 90;
+                return plyCount > 6 ? 10 : 80;
             case PieceType.Bishop:
-                return plyCount > 6 ? 0 : 90;
+                return plyCount > 6 ? 20 : 90;
             case PieceType.Rook:
                 return plyCount > 40 ? 0 : 100;
             case PieceType.Queen:
@@ -159,12 +156,12 @@ public class MyBot : IChessBot
 
         if (board.IsDraw())
         {
-            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            if (lastMoveWasWhiteMove && _playerIsWhite)
             {
                 return diff < -6 ? 10000 : -10000;
             }
 
-            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            if (!lastMoveWasWhiteMove && !_playerIsWhite)
             {
                 return diff < -6 ? 10000 : -10000;
             }
@@ -174,12 +171,12 @@ public class MyBot : IChessBot
 
         if (board.IsInCheckmate())
         {
-            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            if (lastMoveWasWhiteMove && _playerIsWhite)
             {
                 return 100000 + 1000 / board.PlyCount;
             }
 
-            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            if (!lastMoveWasWhiteMove && !_playerIsWhite)
             {
                 return 100000 + 1000 / board.PlyCount;
             }
