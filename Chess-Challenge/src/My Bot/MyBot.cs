@@ -17,9 +17,7 @@ public class MyBot : IChessBot
     {
         _resultsCalculated = 0;
 
-        int maxDepth = 6;
-        if (board.PlyCount > 20)
-            maxDepth = 8;
+        int maxDepth = 8;
 
         int depth = maxDepth - 1;
         _playerIsWhite = board.IsWhiteToMove;
@@ -157,34 +155,26 @@ public class MyBot : IChessBot
 
         if (board.IsDraw())
         {
-            if (lastMoveWasWhiteMove && _playerIsWhite)
-            {
-                return diff < -6 ? 10000 : -10000;
-            }
-
-            if (!lastMoveWasWhiteMove && !_playerIsWhite)
-            {
-                return diff < -6 ? 10000 : -10000;
-            }
-
-            return -1000;
+            return diff < 0 
+                ? 10000 + 10000 / board.PlyCount 
+                : -10000 - (10000 / board.PlyCount);
         }
 
         if (board.IsInCheckmate())
         {
             if (lastMoveWasWhiteMove && _playerIsWhite)
             {
-                return 100000 + 1000 / board.PlyCount;
+                return 100000 + 10000 / board.PlyCount;
             }
 
             if (!lastMoveWasWhiteMove && !_playerIsWhite)
             {
-                return 100000 + 1000 / board.PlyCount;
+                return 100000 + 10000 / board.PlyCount;
             }
 
             if (board.PlyCount == 0) return -100000;
 
-            return -100000 - (1000 / board.PlyCount);
+            return -100000 - (10000 / board.PlyCount);
         }
 
         return diff;
