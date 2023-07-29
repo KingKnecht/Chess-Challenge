@@ -8,7 +8,7 @@ using Move = ChessChallenge.API.Move;
 public class MyBot : IChessBot
 {
     private Move _bestMove = Move.NullMove;
-    private bool PlayerIsWhite;
+    private bool _playerIsWhite;
     private int _moveCount = 0;
     private int _resultsCalculated;
 
@@ -21,7 +21,7 @@ public class MyBot : IChessBot
             maxDepth = 8;
 
         int depth = maxDepth - 1;
-        PlayerIsWhite = board.IsWhiteToMove;
+        _playerIsWhite = board.IsWhiteToMove;
 
         var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue, Move.NullMove);
 
@@ -159,12 +159,12 @@ public class MyBot : IChessBot
 
         if (board.IsDraw())
         {
-            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            if (lastMoveWasWhiteMove && _playerIsWhite)
             {
                 return diff < -6 ? 10000 : -10000;
             }
 
-            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            if (!lastMoveWasWhiteMove && !_playerIsWhite)
             {
                 return diff < -6 ? 10000 : -10000;
             }
@@ -174,12 +174,12 @@ public class MyBot : IChessBot
 
         if (board.IsInCheckmate())
         {
-            if (lastMoveWasWhiteMove && PlayerIsWhite)
+            if (lastMoveWasWhiteMove && _playerIsWhite)
             {
                 return 100000 + 1000 / board.PlyCount;
             }
 
-            if (!lastMoveWasWhiteMove && !PlayerIsWhite)
+            if (!lastMoveWasWhiteMove && !_playerIsWhite)
             {
                 return 100000 + 1000 / board.PlyCount;
             }
