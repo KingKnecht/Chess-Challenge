@@ -19,16 +19,29 @@ public class MyBot : IChessBot
     private Move _bestMove = Move.NullMove;
     private bool PlayerIsWhite;
     private int _moveCount = 0;
+    private int _resultsCalculated;
+
     public Move Think(Board board, Timer timer)
     {
+        _resultsCalculated = 0;
+        
+        int maxDepth = 6;
+        if (board.PlyCount > 10)
+            maxDepth = 6;
 
-        Console.WriteLine("Moves: " + ++_moveCount);
-
-        var maxDepth = 8;
         int depth = maxDepth - 1;
         PlayerIsWhite = board.IsWhiteToMove;
 
         var result = AlphaBeta(board, depth, maxDepth, true, board.IsWhiteToMove, float.MinValue, float.MaxValue, Move.NullMove);
+
+        Console.WriteLine($"Move #{++_moveCount}");
+        Console.WriteLine($"Best {_bestMove}");
+        Console.WriteLine($"Value: {result}");
+        Console.WriteLine($"Time per move: {timer.MillisecondsElapsedThisTurn / 1000f}s");
+        Console.WriteLine($"# Calcs: {_resultsCalculated}");
+        Console.WriteLine($"# Calcs/s: {_resultsCalculated / (timer.MillisecondsElapsedThisTurn /1000f)}");
+        Console.WriteLine();
+        
         return _bestMove;
     }
 
@@ -40,23 +53,26 @@ public class MyBot : IChessBot
         if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
         {
             var value = GetPositionValue(board, isWhite, isMaximizer);
-            //Console.WriteLine(value.ToString());
+            _resultsCalculated++;
             return value;
         }
-        
+
         var orderedMoves = board.GetLegalMoves()
-                .OrderByDescending(m => GetPieceValue(m.CapturePieceType))
-                .ThenByDescending(m => m.PromotionPieceType)
-                .ThenByDescending(m => m.TargetSquare.Name == "e4"
-                                       || m.TargetSquare.Name == "e5"
-                                       || m.TargetSquare.Name == "d4"
-                                       || m.TargetSquare.Name == "d5")
+                //.OrderBy(m => GetPieceValue(m.MovePieceType))
+                .OrderBy(m => MoveValue(m.MovePieceType, m.CapturePieceType))
+            //.ThenByDescending(m => m.PromotionPieceType)
+            //.ThenByDescending(m =>
+            // //                         m.TargetSquare.Name == "c3" || m.TargetSquare.Name == "c4" || m.TargetSquare.Name == "c5" || m.TargetSquare.Name == "c6"
+            //                        m.TargetSquare.Name == "d3" || m.TargetSquare.Name == "d4" || m.TargetSquare.Name == "d5" || m.TargetSquare.Name == "d6"
+            //                       || m.TargetSquare.Name == "e3" || m.TargetSquare.Name == "e4" || m.TargetSquare.Name == "e5" || m.TargetSquare.Name == "e6"
+            //                       //|| m.TargetSquare.Name == "f3" || m.TargetSquare.Name == "f4" || m.TargetSquare.Name == "f5" || m.TargetSquare.Name == "f6"
+            //)
             ;
 
 
         if (isMaximizer)
         {
-            var hValue = int.MinValue;
+            var best = int.MinValue;
 
             foreach (var move in orderedMoves)
             {
@@ -68,9 +84,9 @@ public class MyBot : IChessBot
 
                 board.UndoMove(move);
 
-                if (hValue < value)
+                if (best < value)
                 {
-                    hValue = value;
+                    best = value;
 
                     // Remember which move gave the highest hValue
                     if (depth == maxDepth - 1)
@@ -80,18 +96,18 @@ public class MyBot : IChessBot
                     }
                 }
 
-                if (hValue > alpha)
-                    alpha = hValue;
+                if (best > alpha)
+                    alpha = best;
 
                 if (beta <= alpha)
                     break;
             }
 
-            return hValue;
+            return best;
         }
         else
         {
-            int hValue = int.MaxValue;
+            var best = int.MaxValue;
 
             foreach (var move in orderedMoves)
             {
@@ -101,24 +117,28 @@ public class MyBot : IChessBot
 
                 board.UndoMove(move);
 
-                if (hValue > value)
-                    hValue = value;
+                if (best > value)
+                    best = value;
 
-                if (hValue < beta)
-                    beta = hValue;
+                if (best < beta)
+                    beta = best;
 
                 if (beta <= alpha)
                     break;
             }
 
-            return hValue;
+            return best;
         }
+    }
+
+    private int MoveValue(PieceType movePieceType, PieceType capturePieceType)
+    {
+        return (int)((10000f / (float)movePieceType) * (float)capturePieceType);
     }
 
     public int GetPositionValue(Board board, bool isWhite, bool isMaximizer)
     {
         var lastMoveWasWhiteMove = !board.IsWhiteToMove;
-
 
         var diff = GetMaterialDifference(board, lastMoveWasWhiteMove);
 
@@ -171,24 +191,12 @@ public class MyBot : IChessBot
         return result;
     }
 
-    public int GetPieceValue(PieceType pieceType)
+    // Piece values: null, pawn, knight, bishop, rook, queen, king
+    static readonly int[] PieceValues = { 0, 1, 3, 3, 5, 9, 10 };
+    
+    public static int GetPieceValue(PieceType pieceType)
     {
-        switch (pieceType)
-        {
-            case PieceType.Pawn:
-                return 1;
-            case PieceType.Knight:
-            case PieceType.Bishop:
-                return 3;
-            case PieceType.Rook:
-                return 5;
-            case PieceType.Queen:
-                return 9;
-            case PieceType.King:
-                return 100;
-
-        }
-        return 0;
+        return PieceValues[(int)pieceType];
     }
 
 }
