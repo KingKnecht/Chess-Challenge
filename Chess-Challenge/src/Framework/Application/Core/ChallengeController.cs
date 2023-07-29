@@ -98,7 +98,7 @@ namespace ChessChallenge.Application
 
             //Todo: Reset to standard start board FEN
             //board.LoadPosition(botMatchStartFens[fenIndex]);
-            board.LoadPosition(botMatchStartFens[507]);
+            board.LoadPosition(botMatchStartFens[505]);
 
             // Player Setup
             PlayerWhite = CreatePlayer(whiteType);
