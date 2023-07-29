@@ -97,8 +97,8 @@ namespace ChessChallenge.Application
             int fenIndex = isGameWithHuman ? 0 : botMatchGameIndex / 2;
 
             //Todo: Reset to standard start board FEN
-            board.LoadPosition(botMatchStartFens[fenIndex]);
-            //board.LoadPosition(botMatchStartFens[507]);
+            //board.LoadPosition(botMatchStartFens[fenIndex]);
+            board.LoadPosition(botMatchStartFens[507]);
 
             // Player Setup
             PlayerWhite = CreatePlayer(whiteType);

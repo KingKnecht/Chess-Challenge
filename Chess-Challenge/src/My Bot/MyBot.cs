@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using ChessChallenge.API;
+using ChessChallenge.Chess;
 using Board = ChessChallenge.API.Board;
 using Move = ChessChallenge.API.Move;
 
@@ -180,6 +181,8 @@ public class MyBot : IChessBot
             {
                 return 100000 + 1000 / board.PlyCount;
             }
+
+            if (board.PlyCount == 0) return -100000;
 
             return -100000 - (1000 / board.PlyCount);
         }
